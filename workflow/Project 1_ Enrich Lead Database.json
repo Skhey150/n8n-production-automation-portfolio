@@ -1,0 +1,214 @@
+{
+  "name": "Project 1: Enrich Lead Database",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "afe7c153-4807-4e89-99ab-70d96b19b26c",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a5b7b746-fe4f-4d7e-8e74-eea6c7c432c6",
+      "name": "Webhook",
+      "webhookId": "afe7c153-4807-4e89-99ab-70d96b19b26c"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.agify.io/?name={{ $json.body.firstName }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "7767d8ae-fc67-4a9c-ac38-d07e9909b34c",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert sales outreach copywriter. \n\nWrite a 1-sentence personalized cold outreach icebreaker for {{ $('Webhook').item.json.body.firstName }} who works at {{ $('Webhook').item.json.body.domain }}. \n\nUse this company info: {{ $json.name || \"Software & Tech\" }}.\n\nKeep it professional, punchy, and under 25 words. Return only the sentence.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "443f6701-33c4-4373-9c32-45731bfff31c",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        320,
+        208
+      ],
+      "id": "5883b8f3-0ad4-480d-9158-4b905cd9f06f",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "k1dd9I19kLfEoQIS",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "14iUPODuhwiJDetyfd4nnr-qtHusBF6HpX0WdXnZX3Uo",
+          "mode": "list",
+          "cachedResultName": "Enrich Leads Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14iUPODuhwiJDetyfd4nnr-qtHusBF6HpX0WdXnZX3Uo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14iUPODuhwiJDetyfd4nnr-qtHusBF6HpX0WdXnZX3Uo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "First Name": "={{ $('Webhook').item.json.body.firstName }}",
+            "Domain": "={{ $('Webhook').item.json.body.domain }}",
+            "Email": "={{ $('Webhook').item.json.body.email }}",
+            "AI Icebreaker ": "={{ $json.output }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "First Name",
+              "displayName": "First Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Domain",
+              "displayName": "Domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Icebreaker ",
+              "displayName": "AI Icebreaker ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        816,
+        0
+      ],
+      "id": "1495496e-6b95-4e5e-9a5f-1c341f65a25a",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "AmgAg8OQXTD0pkmu",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "faa39b65-5e46-4544-8af6-a8025cd24ca5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0475b8b1aa4e96d0cab6d3113b6ba119dfb1fa3276cb9008e215e196483773c9"
+  },
+  "nodeGroups": [],
+  "id": "qIY2W6N0br4qTf8i",
+  "tags": []
+}
