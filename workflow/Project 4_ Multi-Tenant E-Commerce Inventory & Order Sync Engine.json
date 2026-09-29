@@ -1,0 +1,218 @@
+{
+  "name": "Project 4: Multi-Tenant E-Commerce Inventory & Order Sync Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "new-order",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1335aca5-b2a4-49b5-8f00-c28a3ea6fbda",
+      "name": "Webhook",
+      "webhookId": "5c27a5da-c8c8-40b3-8abe-3efab1d84ae1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cdf9dff4-1c0d-4b21-bf34-d6ad6df0fcee",
+              "leftValue": "={{ $json.isLowStock }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        0
+      ],
+      "id": "0154ab40-e16e-4ae6-8667-efa91555b44c",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1TS8mOQdXq8kPr_qn0R-5NIukdnTDw7Ci2a5KrFMOSMY",
+          "mode": "list",
+          "cachedResultName": "Inventory ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1TS8mOQdXq8kPr_qn0R-5NIukdnTDw7Ci2a5KrFMOSMY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1TS8mOQdXq8kPr_qn0R-5NIukdnTDw7Ci2a5KrFMOSMY/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "SKU",
+              "lookupValue": "={{ $json.sku }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        368,
+        0
+      ],
+      "id": "8461f66a-87bc-4164-9929-682db564cc32",
+      "name": "Google Sheet",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "AmgAg8OQXTD0pkmu",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Grab items from Code and Google Sheet using exact node names\nconst code1Items = $('Code').all();\nconst sheetItems = $('Google Sheet').all();\n\nreturn code1Items.map((item, index) => {\n  // Pull stock values from Google Sheet (or fallback defaults if missing)\n  const currentStock = sheetItems[index]?.json?.['Current Stock'] ?? sheetItems[index]?.json?.CurrentStock ?? 10;\n  const reorderLevel = sheetItems[index]?.json?.['Reorder Level'] ?? sheetItems[index]?.json?.ReorderLevel ?? 5;\n  \n  const qtySold = item.json.quantitySold;\n  const newStock = currentStock - qtySold;\n\n  return {\n    json: {\n      sku: item.json.sku,\n      orderId: item.json.orderId,\n      quantitySold: qtySold,\n      oldStock: currentStock,\n      newStock: newStock,\n      reorderLevel: reorderLevel,\n      isLowStock: newStock <= reorderLevel\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        0
+      ],
+      "id": "992d6acc-98ee-4da1-8e2a-6358c7c234c0",
+      "name": "Code 2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.first().json.body.lineItems;\nconst orderId = $input.first().json.body.orderId;\nconst currency = $input.first().json.body.currency;\n\nreturn items.map(item => {\n  return {\n    json: {\n      orderId: orderId,\n      sku: item.sku,\n      quantitySold: item.qty,\n      unitPriceUSD: item.unitPrice,\n      totalUSD: item.qty * item.unitPrice,\n      // Automated currency conversion: USD to ZAR (South African Rand)\n      totalZAR: (item.qty * item.unitPrice * 18.50).toFixed(2)\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        0
+      ],
+      "id": "31f91765-1272-4955-b56f-d3f9fd39b09c",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "sendTo": "one50beats@gmail.com",
+        "subject": "=🚨 LOW STOCK ALERT: {{ $json.sku }}",
+        "message": "=🚨 LOW STOCK ALERT 🚨  \nOrder ID: {{ $json.orderId }} \nSKU: {{ $json.sku }} \nUnits Remaining: {{ $json.newStock }} \nReorder Threshold: {{ $json.reorderLevel }} \nAction Required: Please restock immediately!",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        864,
+        -96
+      ],
+      "id": "dd0a1866-bf6e-4e22-8ee9-2f75fd951820",
+      "name": "Send a message",
+      "webhookId": "ad4bf655-3c99-4ce1-8b20-3ca2a2109f1b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "SSUBQJbSKt3ftsUI",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Google Sheet": {
+      "main": [
+        [
+          {
+            "node": "Code 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code 2": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "0cdb84e3-12bd-4cbd-a07c-6e182b55507d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0475b8b1aa4e96d0cab6d3113b6ba119dfb1fa3276cb9008e215e196483773c9"
+  },
+  "nodeGroups": [],
+  "id": "L40NFS77kKlP0VSp",
+  "tags": []
+}
