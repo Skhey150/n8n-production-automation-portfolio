@@ -1,0 +1,156 @@
+{
+  "name": "Project 3: Automated Multi-Platform Social Media & Content Distribution Pipeline with AI Summarization.",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "feedUrl": "https://techcrunch.com/feed/"
+      },
+      "type": "n8n-nodes-base.rssFeedReadTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e839415f-304a-4077-9854-b61bd6ada1f6",
+      "name": "RSS Feed Trigger"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert AI Content Marketing Director. Your task is to analyze the provided raw content and repurpose it into platform-optimized posts for LinkedIn and Twitter/X, along with an executive summary.\n\n### RAW CONTENT INPUT:\nTitle: {{ $json.title }}\nContent: {{ $json.content }}\n\n### INSTRUCTIONS:\n1. **LinkedIn Post**: Professional tone, engaging hook, bullet points for readability, relevant industry hashtags, and a call-to-action. Keep under 1,500 characters.\n2. **Twitter/X Thread**: A short 3 to 5 tweet thread. Tweet 1 must be a strong hook. Keep each tweet under 270 characters.\n3. **Executive Summary**: A concise 2-3 sentence summary suitable for a team Slack notification or email newsletter.\n\n### OUTPUT FORMAT:\nYou MUST respond with a valid JSON object ONLY. Do NOT wrap the response in markdown code blocks or add any conversational introductory/ending text. Use this exact schema:\n\n{\n  \"summary\": \"Your 2-3 sentence executive summary here.\",\n  \"linkedinPost\": \"Full LinkedIn post text here with line breaks...\",\n  \"twitterThread\": [\n    \"Tweet 1 text...\",\n    \"Tweet 2 text...\",\n    \"Tweet 3 text...\"\n  ]\n}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "34660d95-2429-4526-a1b2-01b950dd85f6",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        96,
+        208
+      ],
+      "id": "1a031a53-a963-4eb4-a666-e8e050f7e056",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "O2PQQMl9Fa6fkaoD",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  // Extract raw text from the AI Agent output\n  let rawOutput = item.json.output;\n  \n  // Clean up any stray markdown code fences if present\n  rawOutput = rawOutput.replace(/```json/g, '').replace(/```/g, '').trim();\n  \n  // Parse string into a true JSON object\n  const parsedData = JSON.parse(rawOutput);\n\n  return {\n    json: parsedData\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        0
+      ],
+      "id": "3ced5bbe-39da-4b6f-9989-4ed0a9eff6f9",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discordapp.com/api/webhooks/1554094823554686996/zsF2X8oHrR3sD9ZaI1wZfWiDPXbVsbi_lWf-DG7wttDW1qkCVFEXEXp9RlJHDDJvjnOe",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "=🚀 **NEW AI CONTENT SUMMARY**\n\n**Executive Summary:**\n{{ $json.summary }}\n\n**LinkedIn Post Draft:**\n{{ $json.linkedinPost.slice(0, 1200) }}..."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        816,
+        0
+      ],
+      "id": "755d7f8e-d43c-4e50-b61b-f5bab2ba650e",
+      "name": "HTTP Request"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "RSS Feed Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "fefbdd0e-fb0b-47b6-ad7b-9e00018ead63",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0475b8b1aa4e96d0cab6d3113b6ba119dfb1fa3276cb9008e215e196483773c9"
+  },
+  "nodeGroups": [],
+  "id": "XcCCCOy0H55Zwoym",
+  "tags": []
+}
